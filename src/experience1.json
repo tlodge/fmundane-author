@@ -1,0 +1,59 @@
+{
+    "start": {
+        "action": "greet",
+        "event": "e0"
+    },
+
+    "events": [
+        {
+            "id": "e0",
+            "type": "speech",
+            "rules": [
+                {
+                    "rule" : {
+                        "operator": "hasword",
+                        "value": ["hello"]
+                    },
+                    "actions": [
+                        ["fanhot", "blindsup"],
+                        ["redlights"]
+                    ],
+                    "next": ["e1"]
+                },
+                {
+                "rule": {
+                    "operator": "hasword",
+                    "value": ["goodbye"]
+                },
+                "actions": [
+                    ["bluelights"]
+                ],
+                "next": ["e2"]
+                }
+            ],
+            "default": {
+                "rule": {
+                    "operator": "timeout",
+                    "value": 3000
+                },
+                "actions": ["greet"],
+                "next": "e0"
+            }
+        }
+    ],
+
+    "actions": [
+        {
+            "id": "fanhot",
+            "type": "request",
+            "data" : {
+            "url": "https://192.168.1.109/dyson/hot",
+                "type": "GET",
+                "contenttype": "application/json",
+                "body": {
+                    "id": "28282:1292920-2;"
+                }
+            }
+        }
+    ]
+}
