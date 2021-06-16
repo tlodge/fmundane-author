@@ -1,15 +1,64 @@
 import {useState}  from 'react';
 import ButtonCreator from "./ButtonCreator";
 import Layout from "./CreatorLayout";
+import { useSelector, useDispatch } from 'react-redux';
+
+
 
 import {
    addNewNode,
    selectNodes   
-} from './creatorSlice';
+} from '../layer/layerSlice';
+
+const _subscriptiontable = {
+    "button" : "press",
+}
+
+const lookupsubscripiton = (type)=>{
+    return _subscriptiontable[type] || type;
+}
 
 export function Creator() {
+    const dispatch = useDispatch();
+    const [type, setType]       = useState("");
+    const [name, setName]       = useState("");
+    const [rules, setRules]     = useState([]);
+    const [speech, setSpeech]   = useState([]);
 
-    const [type, setType] = useState();
+    const nodes = useSelector(selectNodes);
+
+    const createNode = ()=>{
+        
+        const node = {
+            name: name,
+            id: name.replace(/\s/g, "_"),
+            onstart: speech,
+            type,
+            subscription : `/${lookupsubscripiton(type)}`,
+            rules,
+        }
+        dispatch(addNewNode(node));
+        reset();
+    }
+    
+    const speechChanged = (speech = [])=>{
+        setSpeech(speech);
+    }
+
+    const rulesChanged = (rules = [])=>{
+        setRules(rules);
+    }
+
+    const nameChanged = (name = "")=>{
+        setName(name);
+    }
+
+    const reset = ()=>{
+        setName("");
+        setRules([]);
+        setSpeech([]);
+        setType("");
+    }
 
     const renderToolbar = ()=>{
         return <div className="flex flex-row">
@@ -21,6 +70,10 @@ export function Creator() {
     }
 
     const renderAddEvent = ()=>{
+
+        const props = {
+            rulesChanged
+        }
         switch (type){
             case "speech":
                 return <p>speech</p>
@@ -29,14 +82,15 @@ export function Creator() {
                 return <p>gesture</p>
                 
             case "button":
-                return <ButtonCreator/>
+                return <ButtonCreator {...props}/>
         }
     }
 
     return<div className="flex flex-col">
         <div>{renderToolbar()}</div> 
-        <Layout>
+        <Layout nameChanged={nameChanged} speechChanged={speechChanged}>
             <div className="flex justify-start items-start">{renderAddEvent()}</div> 
         </Layout>
+        <div><button onClick={createNode} className="p-2 mt-4 bg-blue-500 text-white">Create node!</button></div>
     </div>
 }

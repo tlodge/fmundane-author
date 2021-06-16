@@ -1,7 +1,7 @@
 import {useState, useEffect}  from 'react';
 
 
-export default function Speech() {
+export default function Speech({speechChanged}) {
     
     const [lines, setLines] = useState([{"speech":"", "duration":0}]);
 
@@ -10,26 +10,32 @@ export default function Speech() {
     }
 
     const deleteLine = (index)=>{
-        return setLines(lines.reduce((acc,item,i)=>{
+         const _lines = lines.reduce((acc,item,i)=>{
             return i == index ? acc : [...acc, item];
-        },[]));
+        },[]);
+        setLines(_lines);
+        speechChanged(_lines);
     }
 
     const setText = (index,text)=>{
-        return setLines(lines.map((acc,item,i)=>{
+        const _lines = lines.map((item,i)=>{
             return i==index ? {...item, speech:text} : item;
-        },[]));
+        },[]);
+        setLines(_lines);
+        speechChanged(_lines);
     }
 
     const setDuration = (index, ms)=>{
-        return setLines(lines.map((acc,item,i)=>{
+        const _lines = lines.map((item,i)=>{
             try{
                 return i==index ? {...item, duration:Number(ms)} : item;
             }catch(err){
                 return item;
             }
             
-        },[]));
+        },[]);
+        setLines(_lines);
+        speechChanged(_lines);
     }
 
     const renderLines = ()=>{

@@ -16,7 +16,14 @@ export const creatorSlice = createSlice({
 
 export const { addNode } = creatorSlice.actions;
 
-export const addNewNode = (r) => (dispatch, getState) => {}
+export const addNewNode = (node) => {
+  console.log("ok in add new node!!");
+  return (dispatch, getState) => {
+    console.log("adding node", node);
+    dispatch(addNode(node));
+  }
+}
+
 export const selectNodes = state => state.creator.nodes;
 
 
