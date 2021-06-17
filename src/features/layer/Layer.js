@@ -1,33 +1,28 @@
-import {useState}  from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import Tree from './Tree';
 
 import {
+   selectTree,
    selectNodes,
-   selectTree,  
+   setLookuptable, 
+   setParentToAddTo,
 } from './layerSlice';
 
-export function Layer() {
+
+
+export function Layer({toggleAddNew}) {
+
     const dispatch = useDispatch();
     const nodes = useSelector(selectNodes);
-    const tree  = useSelector(selectTree);
+    const lut  = useSelector(selectTree);
 
-    console.log("tree is", tree);
-    //const renderNodes = ()=>{
-     //   return nodes.map(n=>{
-    //        return <div key={n.id}>{JSON.stringify(n)}</div>
-    //    })
- //   }
-
+    
     const renderTree = ()=>{
-         console.log("in render tere with", tree);
-        if (tree){
-            return <Tree t={tree}/>
+        if (lut){
+            return <Tree lookuptable={lut} setLookuptable={setLookuptable} nodes={nodes} toggleAddNew={toggleAddNew} setParentToAddTo={(parent)=>dispatch(setParentToAddTo(parent))}/>
         }
     }
     return  <div>
-                <div> A TREE </div>
-                {/*renderNodes()*/}
                 {renderTree()}
             </div>
 }

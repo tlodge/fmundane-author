@@ -4,27 +4,32 @@ export const creatorSlice = createSlice({
   name: 'creator',
   
   initialState: {
-    nodes: []
+    nodes: [],
+    parent: null,
   },
 
   reducers: {
     addNode : (state, action)=>{
       state.nodes = [...state.nodes, action.payload]
-    }
+    },
+   
   }
 });
 
-export const { addNode } = creatorSlice.actions;
+export const { addNode,setParent } = creatorSlice.actions;
 
 export const addNewNode = (node) => {
-  console.log("ok in add new node!!");
+
   return (dispatch, getState) => {
-    console.log("adding node", node);
     dispatch(addNode(node));
+    const parenttoaddto = getState().creator.parent;
+
+    //dispatch(setParentToAddTo(null))
   }
 }
 
-export const selectNodes = state => state.creator.nodes;
 
+export const selectNodes = state => state.creator.nodes;
+export const selectParent = state=>state.creator.parent;
 
 export default creatorSlice.reducer;
