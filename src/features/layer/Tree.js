@@ -36,8 +36,7 @@ const _clink = (sx, sy, tx, ty) => {
 }
 
 const insert = (lookup, event, nodes={})=>{
-    console.log("have event", event.event)
- 
+    console.log("inserting...", event.event) 
     const children = lookup[event.event] || [];
     const [name=["x"]] = (nodes[event.event].name || "").split(".");
     const {onstart=""} = nodes[event.event]
@@ -87,10 +86,10 @@ const lookuplinks = (lnks)=>{
 }
 
 
-export default function Tree({lookuptable,nodes,toggleAddNew,setParentToAddTo,setLookuptable}) {
+export default function Tree({lookuptable,nodes,toggleAddNew,setParentToAddTo,setLookuptable,addNew}) {
 
     const dispatch = useDispatch();
-    console.log("ok have lookup table", lookuptable);
+    console.log("ok have addNEw!! table", addNew);
 
   //const [lookuptable, setLookuptable] = useState(t);
   
@@ -102,6 +101,7 @@ export default function Tree({lookuptable,nodes,toggleAddNew,setParentToAddTo,se
   const [parent, setParent] = useState();
 
   const reset = ()=>{
+      console.log("************************** RESET CLICKED ***********************");
       setChild();
       setParent();
       toggleAddNew(false);
@@ -123,6 +123,13 @@ export default function Tree({lookuptable,nodes,toggleAddNew,setParentToAddTo,se
     setParent(node);
     setParentToAddTo(node.data.event.event);
   }
+
+  useEffect(()=>{
+      if (!addNew){
+        setParent();
+        setChild();
+      }
+  },[addNew])
   
   useEffect(()=>{ 
 

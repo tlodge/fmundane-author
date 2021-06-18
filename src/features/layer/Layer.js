@@ -6,20 +6,22 @@ import {
    selectNodes,
    setLookuptable, 
    setParentToAddTo,
+   setViewAddNode,
+   selectViewAdd
 } from './layerSlice';
 
 
 
-export function Layer({toggleAddNew}) {
+export function Layer() {
 
     const dispatch = useDispatch();
     const nodes = useSelector(selectNodes);
     const lut  = useSelector(selectTree);
-
+    const addNew  = useSelector(selectViewAdd);
     
     const renderTree = ()=>{
         if (lut){
-            return <Tree lookuptable={lut} setLookuptable={setLookuptable} nodes={nodes} toggleAddNew={toggleAddNew} setParentToAddTo={(parent)=>dispatch(setParentToAddTo(parent))}/>
+            return <Tree lookuptable={lut} setLookuptable={setLookuptable} nodes={nodes} toggleAddNew={(value)=>dispatch(setViewAddNode(value))} setParentToAddTo={(parent)=>dispatch(setParentToAddTo(parent))} addNew={addNew}/>
         }
     }
     return  <div>

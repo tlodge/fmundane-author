@@ -153,7 +153,8 @@ export const layerSlice = createSlice({
     parent: null,
     lut : createLut(_nodesById),
     nodesById :  _nodesById,
-    nodes: Object.keys(_nodesById)
+    nodes: Object.keys(_nodesById),
+    viewAdd: false,
   },
 
   reducers: {
@@ -176,6 +177,9 @@ export const layerSlice = createSlice({
     },
     generateLookuptable : (state)=>{
         state.lut = createLut(state.nodesById)
+    },
+    setViewAddNode : (state, action)=>{
+        state.viewAdd = action.payload;
     },
     updateParent : (state, action)=>{
         state.nodesById = Object.keys(state.nodesById).reduce((acc,key)=>{
@@ -201,11 +205,21 @@ export const layerSlice = createSlice({
 
 
 
-export const { addNode, setParent, updateParent,setLookup,generateLookuptable} = layerSlice.actions;
+export const { addNode, setParent, updateParent,setLookup,generateLookuptable,setViewAddNode} = layerSlice.actions;
 
+const unique = (value="", arr=[])=>{
+  
+    let _value = value;
+    let i = 0;
+    while (arr.indexOf(_value) != -1){
+        _value = `${_value}_${++i}`
+    }
+   
+    return _value;
+}
 export const addNewNode = (node) => {
   return (dispatch, getState) => {
-      dispatch(addNode(node));
+       dispatch(addNode(node));
   }
 }
 
@@ -223,17 +237,36 @@ export const setParentToAddTo = (parent)=>{
     }
 }
 
+export const showAddNode = (value)=>{
+    return (dispatch, getState)=>{
+        dispatch(setViewAddNode(value))
+    }
+}
+
+
+export const  addToParent = (node, rule, actions)=>{
+    return (dispatch, getState)=>{
+        const nodes = getState().layer.nodes;
+        const name = unique(node.name, nodes);
+        const _node = {...node, name:`${name}`, id:`${name.replace(" ","_")}`};
+        dispatch(addNewNode(_node));
+        dispatch(addRulesToParent(rule,actions,_node.name))
+    }
+}
+
+
 //SOOO close now!
 export const addRulesToParent = (op, actions, next)=>{
-    console.log("adding following to parent", op, actions, next);
+
     return (dispatch, getState)=>{
         dispatch(updateParent({op, actions, next}));
         dispatch(generateLookuptable());
+        dispatch(showAddNode(false));
     }
 }
 export const selectNodes        = state => state.layer.nodesById;
 export const selectParent       = state => state.layer.parent;
-
+export const selectViewAdd      = state => state.layer.viewAdd;
 
 //EASY FIX NOW.  You currently have two ways that the lookup table is generated.  One is by looking at the nodes and generating it that way (which is done when a new node is created)
 //the other way is when it is sent directly from d3.  This should not happen.  The lookuptable should be generated here only, based on the nodes.  It is perfectly reasonable that 

@@ -8,7 +8,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
    addNewNode,
    selectParent,   
-   addRulesToParent,
+   addToParent,
 } from '../layer/layerSlice';
 
 export function Creator() {
@@ -31,9 +31,9 @@ export function Creator() {
             subscription : `/press`,
             rules: [],
         }
-        dispatch(addNewNode(node));
-        dispatch(addRulesToParent(rule,actions,name))
-        //reset();
+
+        dispatch(addToParent(node, rule, actions));
+        reset();
     }
     
     const speechChanged = (speech = [])=>{
