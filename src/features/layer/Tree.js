@@ -36,7 +36,6 @@ const _clink = (sx, sy, tx, ty) => {
 }
 
 const insert = (lookup, event, nodes={})=>{
-    console.log("inserting...", event.event) 
     const children = lookup[event.event] || [];
     const [name=["x"]] = (nodes[event.event].name || "").split(".");
     const {onstart=""} = nodes[event.event]
@@ -86,29 +85,19 @@ const lookuplinks = (lnks)=>{
 }
 
 
-export default function Tree({lookuptable,nodes,toggleAddNew,setParentToAddTo,setLookuptable,addNew}) {
+export default function Tree({lookuptable,nodes,toggleAddNew,setParentToAddTo,setLookuptable,addNew, exportNodes}) {
 
-    const dispatch = useDispatch();
-    console.log("ok have addNEw!! table", addNew);
-
-  //const [lookuptable, setLookuptable] = useState(t);
-  
-  //isue two lookuptavbles and need to decide when you are using each - updating nodes will pull in new
-  //table from props whereas updating positions uodates the current state (in the useeffect).  So if you update the 
-  //reduceer with the lookuptable then this is passed back in I think it ought to work..
-
+  const dispatch = useDispatch();  
   const [child, setChild] = useState();
   const [parent, setParent] = useState();
 
   const reset = ()=>{
-      console.log("************************** RESET CLICKED ***********************");
       setChild();
       setParent();
       toggleAddNew(false);
   }
 
   const childSelected =(e,node)=>{
-    console.log("childselected", node);
     toggleAddNew(false);
     setChild(node);
   }
@@ -133,11 +122,9 @@ export default function Tree({lookuptable,nodes,toggleAddNew,setParentToAddTo,se
   
   useEffect(()=>{ 
 
-    console.log("parent", parent);
-    console.log("child", child);
+   
 
     if (!child){    
-       //setParent();
        return;
     }
   
@@ -186,10 +173,9 @@ export default function Tree({lookuptable,nodes,toggleAddNew,setParentToAddTo,se
     },{});
     setChild();
     setParent();
-    console.log("*** setting lookup table!!", filtered);
     dispatch(setLookuptable(filtered));
    
-  },[child, parent,lookuptable]);
+  },[child, parent]);
 
   const svgref = useD3(
    
@@ -213,11 +199,19 @@ const allexcept = (tree, nodestoignore=[])=>{
   return eligible;
 }
 
-const treeref = useD3((root) => {
-        
-    console.log("************** trendering tree!!!!!!!");
-    console.log(lookuptable);
+const allchildren = (node, lut)=>{
+    if (!lut[node] || lut[node].length <= 0){
+        return []
+    }
+    return [...lut[node], ...lut[node].reduce((acc, n)=>{
+        return [...acc, ...allchildren(n.event,lut)]
+    },[])]
+}
+//calculate eligible nodes to swap to!
 
+
+const treeref = useD3((root) => {
+    
     const jsontree = convertToHierarchy(lookuptable,nodes);
     const hier = (d3h.hierarchy(jsontree, d=>d.children));
     const tree   =  d3h.tree().nodeSize([sw+XPADDING,sh+YPADDING])(hier);  
@@ -225,18 +219,33 @@ const treeref = useD3((root) => {
     const currentlinks = lookuplinks(_links);
     let eligible = [];
 
+    const parentfor = Object.keys(lookuptable).reduce((acc,key)=>{
+        if (key === "root"){
+            return acc;
+        }
+        const item = lookuptable[key];
+        
+        return {
+                    ...acc, 
+                    ...(item.reduce((acc,obj)=>{
+                        return {
+                            ...acc,
+                            [obj.event] : key,
+                        }
+                    },{}))
+        }
+    },{});
     
     if (child){
-      let nodestoignore = child ? [child.parent.data.name] : [];
-      child.each(n=> nodestoignore = [...nodestoignore, n.data.name]);
+      //ignore all children, current parent and self as candidates for new parent
+      const nodestoignore = [...allchildren(child.data.event.event,lookuptable).map(e=>e.event), parentfor[child.data.event.event], child.data.event.event];
       eligible = allexcept(tree,nodestoignore);
     }
 
     root.selectAll("g#slide")
         .data(tree.descendants(), (d) => {
-            console.log(d.data.event.id);
             return d.data.event.id
-        }) //check descendants are changing -- should it not be the name + x,y pos!!????!!!
+        }) 
         .join(
         enter => {
 
@@ -280,7 +289,7 @@ const treeref = useD3((root) => {
     const link = root.selectAll("path#link").data(_links, d=>`${d.from.name}${d.to.name}`).join(
           enter => {
             enter.append("path").attr("id", "link").attr("d", l=>{
-              return _clink(l.from.x+(sw/2), l.from.y+LINKDELTA, l.to.x+(sw/2), l.to.y);
+              return _clink(l.from.x+(sw/2), l.from.y+LINKDELTA+TARGETBIGR, l.to.x+(sw/2), l.to.y);
             })
             .style("stroke","#000")
             .style("opacity",0)
@@ -296,31 +305,38 @@ const treeref = useD3((root) => {
       .attrTween("d", l=>{
           const last = treeref.current.last || {};
           const l1 = last[`${l.from.name}_${l.to.name}`];
-          var previous = l1 ?  _clink(l1.x1+(sw/2), l1.y1+LINKDELTA, l1.x2+(sw/2), l1.y2) : _clink(l.from.x+(sw/2), l.from.y+LINKDELTA, l.to.x+(sw/2), l.to.y);
-          var current =  _clink(l.from.x+(sw/2), l.from.y+LINKDELTA, l.to.x+(sw/2), l.to.y);
+          var previous = l1 ?  _clink(l1.x1+(sw/2), l1.y1+LINKDELTA+TARGETBIGR, l1.x2+(sw/2), l1.y2) : _clink(l.from.x+(sw/2), l.from.y+LINKDELTA+TARGETBIGR, l.to.x+(sw/2), l.to.y);
+          var current =  _clink(l.from.x+(sw/2), l.from.y+LINKDELTA+TARGETBIGR, l.to.x+(sw/2), l.to.y);
           return interpolatePath(previous, current);
       }).on("end", ()=>{
         treeref.current.last = currentlinks; //memoise the previous links
       });
     
-     //render circles
-     const circle = root.selectAll("g#link").data(_links, d=>{return`${d.from.name}${d.to.name}`}).join(
+     //render actions within links
+     root.selectAll("g#link").data(_links, d=>{return`${d.from.name}${d.to.name}`}).join(
         enter => {
             const target = enter.append("g").attr("id", "link").attr("transform", l=>`translate(${l.from.x+sw/2 - (l.from.x-l.to.x)/2}, ${l.to.y+ (l.from.y+LINKDELTA-l.to.y)/2})`);
 
             target.append("circle").attr("id", "link").style("opacity",0).style("fill","white").style("stroke","none").attr("cx", 0).attr("cy",-YPADDING+sh).attr("r",10).transition().duration(ANIMATION_DURATION).style("opacity",1);
             target.append("text").style("text-anchor", "middle").attr("x",0).attr("y",-YPADDING+sh+5).text(l=>l.to.op)
            
-            target.append("circle").style("fill","white").style("stroke","none").attr("cx", 0).attr("cy",20).attr("r",20)
+          
+            target.append("circle").attr("id", "label").style("fill","white").style("opacity", l=>l.to.actions && l.to.actions.length > 0 ? 1 : 0).style("stroke","none").attr("cx", 0).attr("cy",20).attr("r",20)
             target.append("text").style("text-anchor", "middle").attr("x",0).attr("y",25).text(l=>l.to.actions)
+            
         },
         update=>{
             update.transition().duration(ANIMATION_DURATION).attr("transform", l=>`translate(${l.from.x+sw/2 - (l.from.x-l.to.x)/2}, ${l.to.y+ (l.from.y+LINKDELTA-l.to.y)/2})`);
+            update.select("circle#label").style("opacity", l=>l.to.actions && l.to.actions.length > 0 ? 1 : 0);
         },
         exit => exit.call(exit=>exit.remove())
     );
 
-   
+    const _parentSelected = (e, n)=>{
+        if (!child || eligible.indexOf(n.data.event.event) != -1){
+            parentSelected(e,n);
+        }
+    }
     //render targets!
     root.selectAll("g#target")
         .data(tree.descendants(), d => `${d.data.name}${child ? d.data.name==child.data.name ? "_" : "" : ""}`)
@@ -333,9 +349,9 @@ const treeref = useD3((root) => {
             target.append("circle").attr("id", "smalltotarget").attr("cx",sw).attr("cy", LINKDELTA+TARGETSMALLR).attr("r", TARGETSMALLR).style("fill","#ae2b4d").style("stroke","#6F67CC").attr("stroke-width",2.5).on("click",childSelected)
            
             //from target
-            target.append("circle").attr("id", "bigfromtarget").attr("cx",sw).attr("cy", sh+LINKDELTA).attr("r",  TARGETBIGR).style("fill", d=> parent && parent.data.name == d.data.name ? "#ae2b4d":"white").style("stroke","black").attr("stroke-width",2.5).on("click", parentSelected)
-            target.append("circle").attr("id", "smallfromtarget").attr("cx",sw).attr("cy", sh+LINKDELTA).style("opacity", child ? 1 : 0).attr("r",  TARGETSMALLR).style("fill", d=> parent && parent.data.name == d.data.name ? "#ae2b4d":"white").style("stroke","#cc6767").attr("stroke-width",2.5).on("click",parentSelected)
-            target.append("text").attr("id", "smalltotarget").attr("x",sw).attr("y",sh+LINKDELTA+5).text("+").style("text-anchor", "middle").style("fill","black").on("click",parentSelected)
+            target.append("circle").attr("id", "bigfromtarget").attr("cx",sw).attr("cy", sh+LINKDELTA).attr("r",  TARGETBIGR).style("fill", d=> parent && parent.data.name == d.data.name ? "#ae2b4d":"white").style("stroke","black").attr("stroke-width",2.5).on("click", _parentSelected)
+            target.append("circle").attr("id", "smallfromtarget").attr("cx",sw).attr("cy", sh+LINKDELTA).style("opacity", child ? 1 : 0).attr("r",  TARGETSMALLR).style("fill", d=> parent && parent.data.name == d.data.name ? "#ae2b4d":"white").style("stroke","#cc6767").attr("stroke-width",2.5).on("click",_parentSelected)
+            target.append("text").attr("id", "smalltotarget").attr("x",sw).attr("y",sh+LINKDELTA+5).text("+").style("text-anchor", "middle").style("fill","black").on("click", _parentSelected)
  
         },
           update=>{
@@ -346,9 +362,9 @@ const treeref = useD3((root) => {
             update.selectAll("circle#smalltotarget").style("fill", (d)=>child && child.data.name == d.data.name ? "red" : "#ae2b4d").style("stroke",(d)=>child && child.data.name == d.data.name ? "white" : "#6F67CC").on("click", childSelected)
 
             
-            update.selectAll("circle#bigfromtarget").style("stroke", child ? "#ae2b4d" : "black").style("fill", d=> parent && parent.data.name == d.data.name ? "#ae2b4d":"white").on("click", parentSelected).transition().duration(ANIMATION_DURATION).attr("r", d=>eligible.indexOf(d.data.name) == -1 ? TARGETBIGR :  TARGETBIGR+4)
-            update.selectAll("circle#smallfromtarget").style("opacity", child ? 1 : 0).style("fill",  d=> parent &&  parent.data.name == d.data.name ? "#ae2b4d":"white").on("click", parentSelected).transition().duration(ANIMATION_DURATION).attr("r", d=>eligible.indexOf(d.data.name) == -1 ? TARGETSMALLR : TARGETSMALLR+2).attr("class", d=>eligible.indexOf(d.data.name) == -1 ? "":"pulse");
-            update.selectAll("text#smalltotarget").style("opacity", child ? 0 : 1).on("click",parentSelected)
+            update.selectAll("circle#bigfromtarget").style("stroke", child ? "#ae2b4d" : "black").style("fill", d=> parent && parent.data.name == d.data.name ? "#ae2b4d":"white").on("click", _parentSelected).transition().duration(ANIMATION_DURATION).attr("r", d=>eligible.indexOf(d.data.name) == -1 ? TARGETBIGR :  TARGETBIGR+4)
+            update.selectAll("circle#smallfromtarget").style("opacity", child ? 1 : 0).style("fill",  d=> parent &&  parent.data.name == d.data.name ? "#ae2b4d":"white").on("click", _parentSelected).transition().duration(ANIMATION_DURATION).attr("r", d=>eligible.indexOf(d.data.name) == -1 ? TARGETSMALLR : TARGETSMALLR+2).attr("class", d=>eligible.indexOf(d.data.name) == -1 ? "":"pulse");
+            update.selectAll("text#smalltotarget").style("opacity", child ? 0 : 1).on("click",_parentSelected)
            
           
           },
@@ -365,7 +381,10 @@ const treeref = useD3((root) => {
     <div >
      
       <main>
-            <div className="flex justify-center items-center">
+            <div className="flex justify-center items-center flex-col">
+                <div onClick={()=>{console.log("clciked!");dispatch(exportNodes())}} className="bg-blue-500 text-white w-screen h-12 flex items-center justify-center">
+                    <div>EXPORT</div>
+                </div>
             <svg onClick={()=>reset()} ref={svgref} width={"100vw"} height={"100vh"}>
                 <g  id="dragbox">
                     <g onClick={(e)=>{e.stopPropagation()}}  ref={treeref}>
